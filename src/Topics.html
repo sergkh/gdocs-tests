@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      html {
+        font-family: 'Arial'
+      }
+
+    </style>  
+  </head>
+  <body>
+<? var stats = questionsStats(); ?>
+  Загальна кількість питань: <? stats.total ?> <br/>
+  <h3>По темам</h3>
+    <? for(const topics of (stats.topics)) { ?>
+      <?=`${topics.topic}: ${topics.count}`?></br>
+    <? } ?>
+  </body>
+</html>

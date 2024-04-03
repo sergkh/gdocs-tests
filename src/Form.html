@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+<script>
+      window.addEventListener('load', preventFormSubmit);
+
+      function preventFormSubmit() {
+        var forms = document.querySelectorAll('form');
+        for (var i = 0; i < forms.length; i++) {
+          forms[i].addEventListener('submit', function(event) {
+            event.preventDefault();
+          });
+        }
+      }
+
+      function handleFormSubmit(form) {
+        const inputs = form.elements
+        const docName = inputs["document"].value
+        const variants = parseInt(inputs["variants"].value)
+        const questions = parseInt(inputs["questionsCount"].value)
+        const pages = parseInt(inputs["pagesPerTest"].value)        
+
+        document.querySelector('#status').innerHTML = `Документ генерується. Це не швидко. Можна поки заварити чаю
+        <br/>
+        <img src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/images/loading.gif" />`
+        document.querySelector('#status').setAttribute('disabled', true)
+
+        google.script.run
+          .withSuccessHandler(onComplete)
+          .withFailureHandler(onError)
+          .generateDocument(docName, variants, questions, pages, false)       
+      }
+
+      function onComplete(url) {
+        document.querySelector('#status').innerHTML = `<a href="${url}">Document</a>`
+        document.querySelector('#status').setAttribute('disabled', false)
+      }
+
+      function onError(err) {
+        document.querySelector('#status').innerHTML = "ERROR: " + err
+        document.querySelector('#status').setAttribute('disabled', false)        
+      }
+
+    </script>  
+    <style>
+      html {
+        font-family: 'Arial'
+      }
+      form div>span { min-width: 220px; display: inline-block; }
+      form div { margin-bottom: 10px }
+      input.btn { padding: 7px; }
+      div.center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>  
+  </head>
+  <body>
+    <form id="myForm" onsubmit="handleFormSubmit(this)" style="display: flex; flex-direction: column;">
+      <div>
+        <span>Назва документу:</span> <input name="document" type="text" value="Колоквіум" />
+      </div>
+      <div>
+        <span>Кількість варіантів:</span> <input name="variants" type="number" value="50" />
+      </div>
+      <div>
+        <span>Питань на варіант:</span> <input name="questionsCount" type="number" value="15" />
+      </div>
+      <div>
+        <span>Кількість сторінок на варіант:</span> <input name="pagesPerTest" type="number" value="4" />
+      </div>
+      <div class="center">            
+        <input class="btn" type="submit" value="Згенерувати" />
+      </div>
+    </form>
+    <div id="status"></div>
+    <div style="font-size: 0.7em;">
+      Пояснення до формату:<br/>
+      правильним завжди є перший варіант, після перемішування він буде доданий у правильні відповіді<br/>
+      @TextField(3) - _____ місце на 3 стрічки для відповіді<br/>
+      @NotWith(1,9,10) - не кидати це питання в один білет з 1м, 9м та 10м <br/>
+      ```{}``` – виділяє код monospace шрифтом
+    </div>
+  </body>
+</html>
