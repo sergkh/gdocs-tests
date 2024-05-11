@@ -11,7 +11,8 @@ function onOpen() {
   DocumentApp.getUi()
       .createMenu('Колоквіум')
       .addItem('Генератор...', 'generateDialog')
-      .addItem('Статистика...', 'topicsDialog')      
+      .addItem('Статистика...', 'topicsDialog')
+      .addItem('Екпорт в Moodle', 'moodleExport')
       .addToUi();
 }
 
@@ -32,6 +33,91 @@ function topicsDialog() {
   DocumentApp.getUi()
       .showModalDialog(html, 'Звіт по темам')
 }
+
+function moodleExport() {
+  var questions;
+  
+  const el = name => XmlService.createElement(name)
+  const cdata = (el, text) => el.addContent(XmlService.createCdata(text)) 
+
+  try {
+    questions = parseQuestions()
+  }  catch(e) {
+    Logger.log("Exception occured ", e)
+    DocumentApp.getUi().alert("Помилка при генерації документу: " + e)
+    return ;
+  }
+
+  var doc = XmlService.createDocument()
+  var quizes = el('quiz')
+  doc.addContent(quizes)
+
+  questions.forEach(q => {
+    if (q.options.length <= 1) {
+      Logger.log('Warning skipping freeform question: ' + q.text)
+      return ;
+    }
+
+    const question = el('question')
+      .setAttribute('type', 'multichoice')
+
+    question.addContent(
+      el('name').addContent(cdata(el('text'), q.id))
+    )
+
+    question.addContent(
+      el('questiontext').addContent(cdata(el('text'), q.textAsHtml()))
+    )
+    
+    question.addContent(el('hidden').setText('0'))
+    question.addContent(el('penalty').setText('0.3333333'))
+    question.addContent(el('idnumber').setText(q.id))
+    question.addContent(el('single').setText(q.correctOptions.length > 1 ? 'false' : 'true'))
+    question.addContent(el('defaultgrade').setText('2.000'))
+    question.addContent(el('shuffleanswers').setText('true'))
+    question.addContent(el('answernumbering').setText('abc'))
+    question.addContent(el('showstandardinstruction').setText('1'))
+
+    q.options.forEach((answer, idx) => {
+      const correct = q.correctOptions.includes(idx+1)
+      const node = el('answer')
+          .setAttribute('fraction', correct ? '' + (100 / q.correctOptions.length) : '0')
+          .setAttribute('format', 'html')
+          .addContent(
+            cdata(el('text'), answer)
+          )
+
+      question.addContent(node)
+    })
+
+    const tags = el('tags')
+    q.tags.forEach(t => 
+      tags.addContent(el('tag').addContent(el('text').setText(t)))
+    )
+    question.addContent(tags)
+
+    quizes.addContent(question)
+  });
+
+  const xml = XmlService.getPrettyFormat().format(doc)
+
+  const curDoc = DocumentApp.getActiveDocument()
+  const docFile = DriveApp.getFileById(curDoc.getId())
+  const name = docFile.getName() + ".xml"
+  const firstDir = docFile.getParents().next()
+
+  if (!firstDir) {
+    DocumentApp.getUi().alert('Не вдалось визначити батьківську директорію файлу')  
+    return ;
+  }
+
+  const generatedFile = firstDir.createFile(name, xml)
+  const url = generatedFile.getUrl()
+
+  DocumentApp.getUi()
+    .alert('Згенерований файл: ' + url)
+}
+
 
 function generateDocument(documentName, variantsCount, questionsPerVariantCount, pagesPerTestCount, stats) {  
   var docName = documentName ?? 'col-test'
@@ -128,58 +214,87 @@ function Question(id, text) {
          }
       }
       
-      // Retrieve the paragraph's attributes.
-      //var atts = paragraph.getAttributes();
-      
-      // Log the paragraph attributes.
-      //for (var att in atts) {
-      //  Logger.log(att + ":" + atts[att]);
-      //}
-      
       return self.printOptions(body);		
-	}		
-    
-    self.regenerateIndex = function() {      
-      self.index = Math.ceil(Math.random()*100) + 35*self.usedTimes;
-    }
-    
-    self.printOptions = function(body) {
-      if(self.options.length == 0) 
-        throw 'Питання не має жодного варіанту відповіді: ' + self.text;
-      
-      var opts = [...self.options]
-      var multipleOpts = opts.length > 1
-      var multipleCorrectOptions = self.correctOptions.length > 1
-      var result = ['-']
-      
-      if (multipleOpts) {
-        const correctOpts = self.correctOptions.map(i => opts[i-1]);
-        // randomize
-        opts.sort(function() { return Math.random() - 0.5; });
+	}
 
-        // find correct option indexes
-        result = correctOpts.map(co => opts.indexOf(co)+1)
-      } 
-      
-      opts.forEach(function(o, idx) {
-        self.printOpt(o.trim(), idx, body, multipleOpts, multipleCorrectOptions);
-      });
+  self.textAsHtml = function() {
+    var text = self.text
+    if(text.indexOf("```") == -1) return `<p>${text}</p>`
 
-      return result
-    }
-    
-    self.printOpt = function(o, idx, body, multipleOpts, multipleCorrectOptions) {
-      // 25EF - ◯, 2610 - ☐
-      var checkboxSymb = multipleCorrectOptions ? String.fromCharCode(parseInt('2610', 16)) : String.fromCharCode(parseInt('25EF', 16))
-      var text = multipleOpts ? ( checkboxSymb + ' ' + (idx + 1) + ') ' + o) : o;
+    // We have code formatted as ```code```
+    var out = ''    
+    var pos = 0;
+
+    while (pos < text.length) {
+      var start = text.indexOf("```", pos)
       
-      if(multipleOpts) {
-        body.appendParagraph(text)
-          .setBold(false).setFontSize(11);
+      if (start < 0) {
+        out += `<p>${text.substring(pos)}</p>`
+        pos = text.length
       } else {
-        body.appendParagraph(text).setBold(false).setFontSize(11);  
+        var startText = text.substring(pos, start)
+
+        if (startText) {
+          out += `<p>${startText}</p>`
+        }
+                              
+        var end = text.indexOf("```", start + 3) // 3 is len of ```
+        var endText = text.substring(start + 3, end)
+
+        if (endText) {
+          out += `<code>${endText}</code>`
+        } else {
+          pos = text.length
+        }
+
+        pos = end + 3;
       }
     }
+    
+    return out.replaceAll('\n', '<br/>').replaceAll('<br/></p>', '</p>')
+  }
+    
+  self.regenerateIndex = function() {      
+    self.index = Math.ceil(Math.random()*100) + 35*self.usedTimes;
+  }
+    
+  self.printOptions = function(body) {
+    if(self.options.length == 0) 
+      throw 'Питання не має жодного варіанту відповіді: ' + self.text;
+    
+    var opts = [...self.options]
+    var multipleOpts = opts.length > 1
+    var multipleCorrectOptions = self.correctOptions.length > 1
+    var result = ['-']
+    
+    if (multipleOpts) {
+      const correctOpts = self.correctOptions.map(i => opts[i-1]);
+      // randomize
+      opts.sort(function() { return Math.random() - 0.5; });
+
+      // find correct option indexes
+      result = correctOpts.map(co => opts.indexOf(co)+1)
+    } 
+    
+    opts.forEach(function(o, idx) {
+      self.printOpt(o.trim(), idx, body, multipleOpts, multipleCorrectOptions);
+    });
+
+    return result
+  }
+
+  self.printOpt = function(o, idx, body, multipleOpts, multipleCorrectOptions) {
+    // 25EF - ◯, 2610 - ☐
+    var checkboxSymb = multipleCorrectOptions ? String.fromCharCode(parseInt('2610', 16)) : String.fromCharCode(parseInt('25EF', 16))
+    var text = multipleOpts ? ( checkboxSymb + ' ' + (idx + 1) + ') ' + o) : o;
+    
+    if(multipleOpts) {
+      body.appendParagraph(text)
+        .setBold(false).setFontSize(11);
+    } else {
+      body.appendParagraph(text).setBold(false).setFontSize(11);  
+    }
+  }
 }
 
 function parseQuestions() {
@@ -338,14 +453,14 @@ function replaceFunc(text, question) {
           })
           return ''
         default:
-          Logger.log('Q' + question.id + ' : Replacing "' + match + ' – Not matched a function')
+          Logger.log('Q' + question.id + ' : Replacing "' + match + ' – Not matched a function');
           return match;
       }
     } catch (err) {
        Logger.log(err)
-       return match
+       return match;
     }
-  })
+  });
 }
 
 function containsIncompatible(arr, itm) {
@@ -397,7 +512,7 @@ function formVariant(number, body, questions) {
     titlePar.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
     titlePar.setFontFamily('Arial');
   
-    var namePar = body.appendParagraph('ПІБ ____________________________________________________   Група _______________');
+    var namePar = body.appendParagraph('ПІБ ______________________________________________   Група ____________');
     namePar.setAlignment(DocumentApp.HorizontalAlignment.LEFT);
     namePar.setBold(false);
     namePar.setFontSize(12);
