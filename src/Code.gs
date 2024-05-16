@@ -316,6 +316,9 @@ function parseQuestions() {
   // form questions list
   var questions = [];
 
+// variant contains dot
+  const isQuestionIndex = s => (/^\d+\.?$/gi).test(s)
+
   for (var i = 0; i < questionTokens.length; i++ ) {
     var qStr = questionTokens[i];
     try {
@@ -417,13 +420,8 @@ function questionsStats() {
   }
 }
 
-// variant contains dot
-function isQuestionIndex(s) {
-  return s.indexOf(".") == -1;
-}
-
 function replaceFunc(text, question) {
-  return text.replace(/@(\w+)\((.*)\)/g, function (match, fname, argsStr) {
+  return text.replace(/@(\w+)\((.*?)\)/g, function (match, fname, argsStr) {
     try {
       Logger.log('Q' + question.id + ' : Replacing "' + match + ', fname=' + fname + ', args=' + argsStr);
       
