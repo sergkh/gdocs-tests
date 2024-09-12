@@ -17,11 +17,12 @@ The script will add a new menu item `Generate tests` to the google docs document
 The syntax is inteneded to be a close to a simple text as possible, so it's easier to copy tests from other sources.
 
 Test entry:
-
+```
 1 Question
 1.1 Answer 1
 1.2 Answer 2
 1.3 Answer 3
 1.4 Answer 4
+```
 
 The first answer is the correct one by default.
