@@ -1,0 +1,6 @@
+﻿# Dependency directories
+node_modules/
+
+# Google Clasp user-specific settings
+src/.clasp.json
+src/appsscript.json

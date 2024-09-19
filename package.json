@@ -1,0 +1,27 @@
+{
+  "name": "gdocs-tests",
+  "version": "0.1.0",
+  "description": "Script to create tests in Google Docs",
+  "main": "index.js",
+  "scripts": {
+    "publish": "clasp -P src/ push"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sergkh/gdocs-tests.git"
+  },
+  "keywords": [
+    "Google Docs",
+    "Apps Script"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@google/clasp": "^2.4.2",
+    "@types/google-apps-script": "^1.0.83"
+  },
+  "bugs": {
+    "url": "https://github.com/sergkh/gdocs-tests/issues"
+  },
+  "homepage": "https://github.com/sergkh/gdocs-tests#readme"
+}
