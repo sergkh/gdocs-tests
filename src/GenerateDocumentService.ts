@@ -11,7 +11,7 @@ export class GenerateDocumentService {
         stats
     ) {
         var questions: Question[] = QuestionsParser.parse();
-        Logger.log('questions length ', questions.length);
+        
         // Form document
         if (questionsCount > questions.length / 2)
             throw (
