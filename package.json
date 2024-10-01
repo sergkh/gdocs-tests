@@ -4,7 +4,8 @@
   "description": "Script to create tests in Google Docs",
   "main": "index.js",
   "scripts": {
-    "publish": "clasp -P src/ push"
+    "publish": "clasp -P src/ push",
+    "watch": "clasp -P src/ push --watch"
   },
   "repository": {
     "type": "git",
