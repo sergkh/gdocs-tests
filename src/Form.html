@@ -19,7 +19,7 @@
         const docName = inputs["document"].value
         const variants = parseInt(inputs["variants"].value)
         const questions = parseInt(inputs["questionsCount"].value)
-        const pages = parseInt(inputs["pagesPerTest"].value)        
+        const pages = parseInt(inputs["pagesPerTest"].value)
 
         document.querySelector('#status').innerHTML = `Документ генерується. Це не швидко. Можна поки заварити чаю
         <br/>
@@ -29,7 +29,7 @@
         google.script.run
           .withSuccessHandler(onComplete)
           .withFailureHandler(onError)
-          .generateDocument(docName, variants, questions, pages, false)       
+          .generateDocument(docName, variants, questions, pages, false)
       }
 
       function onComplete(url) {
@@ -39,10 +39,10 @@
 
       function onError(err) {
         document.querySelector('#status').innerHTML = "ERROR: " + err
-        document.querySelector('#status').setAttribute('disabled', false)        
+        document.querySelector('#status').setAttribute('disabled', false)
       }
 
-    </script>  
+    </script>
     <style>
       html {
         font-family: 'Arial'
@@ -55,7 +55,7 @@
         align-items: center;
         justify-content: center;
       }
-    </style>  
+    </style>
   </head>
   <body>
     <form id="myForm" onsubmit="handleFormSubmit(this)" style="display: flex; flex-direction: column;">
@@ -71,7 +71,7 @@
       <div>
         <span>Кількість сторінок на варіант:</span> <input name="pagesPerTest" type="number" value="4" />
       </div>
-      <div class="center">            
+      <div class="center">
         <input class="btn" type="submit" value="Згенерувати" />
       </div>
     </form>
